@@ -15,7 +15,7 @@ function cleanJson(text: string): string {
 export async function parsePortfolioPDF(pdfText: string): Promise<ParsedHolding[]> {
   const client = getGeminiClient();
   const response = await client.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     contents: `Extract all stock/ETF holdings from this brokerage statement. Return ONLY a JSON array (no markdown, no explanation) with objects having these fields:
 - ticker (string, uppercase stock symbol, required)
 - shares (number, required)
@@ -37,7 +37,7 @@ ${pdfText.slice(0, 12000)}
 export async function parseOrderNotification(text: string): Promise<ParsedOrder> {
   const client = getGeminiClient();
   const response = await client.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     contents: `Extract the trade details from this order notification. Return ONLY a JSON object (no markdown):
 - ticker (string, uppercase)
 - action ("BUY" or "SELL")
@@ -86,7 +86,7 @@ Respond with ONLY a JSON object (no markdown):
 }`;
 
   const response = await client.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     contents: prompt,
   });
 
