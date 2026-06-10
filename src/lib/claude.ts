@@ -1,13 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import type { TechnicalAnalysis, ParsedHolding, ParsedOrder, AICommentary } from "@/types";
-
-function getAnthropicClient() {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY is not set");
-  }
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-}
 
 function getGeminiClient() {
   if (!process.env.GEMINI_API_KEY) {
@@ -64,7 +56,7 @@ ${text}
 }
 
 export async function getAICommentary(analysis: TechnicalAnalysis): Promise<AICommentary> {
-  const client = getAnthropicClient();
+  const client = getGeminiClient();
 
   const stopBuyLines = analysis.stopBuySuggestions.length > 0
     ? analysis.stopBuySuggestions
@@ -93,13 +85,10 @@ Respond with ONLY a JSON object (no markdown):
   "keyRisk": "one sentence describing the key risk to monitor"
 }`;
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 512,
-    messages: [{ role: "user", content: prompt }],
+  const response = await client.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: prompt,
   });
 
-  const rawText = response.content[0].type === "text" ? response.content[0].text : "";
-  const cleaned = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(cleaned) as AICommentary;
+  return JSON.parse(cleanJson(response.text ?? "")) as AICommentary;
 }
