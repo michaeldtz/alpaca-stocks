@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@google/genai": "^2.8.0",
     "next": "15.3.3",
     "pdf-parse": "^1.1.1",
     "react": "^19.0.0",
@@ -25,5 +26,9 @@
     "@types/react-dom": "^19",
     "tailwindcss": "^4.1.8",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "@google/genai@2.8.0": true,
+    "protobufjs@7.6.3": true
   }
 }

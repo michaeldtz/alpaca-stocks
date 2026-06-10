@@ -1,22 +1,30 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import type { TechnicalAnalysis, ParsedHolding, ParsedOrder, AICommentary } from "@/types";
 
-function getClient() {
+function getAnthropicClient() {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error("ANTHROPIC_API_KEY is not set");
   }
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
+function getGeminiClient() {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not set");
+  }
+  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+}
+
+function cleanJson(text: string): string {
+  return text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+}
+
 export async function parsePortfolioPDF(pdfText: string): Promise<ParsedHolding[]> {
-  const client = getClient();
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 2048,
-    messages: [
-      {
-        role: "user",
-        content: `Extract all stock/ETF holdings from this brokerage statement. Return ONLY a JSON array (no markdown, no explanation) with objects having these fields:
+  const client = getGeminiClient();
+  const response = await client.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: `Extract all stock/ETF holdings from this brokerage statement. Return ONLY a JSON array (no markdown, no explanation) with objects having these fields:
 - ticker (string, uppercase stock symbol, required)
 - shares (number, required)
 - avgCost (number or null, cost basis per share)
@@ -28,24 +36,17 @@ Brokerage statement text:
 ---
 ${pdfText.slice(0, 12000)}
 ---`,
-      },
-    ],
   });
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
-  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(cleaned) as ParsedHolding[];
+  const text = response.text ?? "";
+  return JSON.parse(cleanJson(text)) as ParsedHolding[];
 }
 
 export async function parseOrderNotification(text: string): Promise<ParsedOrder> {
-  const client = getClient();
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 512,
-    messages: [
-      {
-        role: "user",
-        content: `Extract the trade details from this order notification. Return ONLY a JSON object (no markdown):
+  const client = getGeminiClient();
+  const response = await client.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: `Extract the trade details from this order notification. Return ONLY a JSON object (no markdown):
 - ticker (string, uppercase)
 - action ("BUY" or "SELL")
 - shares (number)
@@ -56,17 +57,14 @@ Order notification:
 ---
 ${text}
 ---`,
-      },
-    ],
   });
 
-  const rawText = response.content[0].type === "text" ? response.content[0].text : "";
-  const cleaned = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(cleaned) as ParsedOrder;
+  const rawText = response.text ?? "";
+  return JSON.parse(cleanJson(rawText)) as ParsedOrder;
 }
 
 export async function getAICommentary(analysis: TechnicalAnalysis): Promise<AICommentary> {
-  const client = getClient();
+  const client = getAnthropicClient();
 
   const stopBuyLines = analysis.stopBuySuggestions.length > 0
     ? analysis.stopBuySuggestions
